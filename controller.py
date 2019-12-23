@@ -1,3 +1,5 @@
+import signal
+
 import pygame
 from adafruit_servokit import ServoKit
 
@@ -67,7 +69,34 @@ def control_motor(motor, reading):
     motor.throttle = value
 
 
+def handle_signals():
+    # register the signals to be caught
+    for sig in [signal.SIGHUP, signal.SIGQUIT, signal.SIGILL,
+                signal.SIGTRAP, signal.SIGABRT, signal.SIGBUS,
+                signal.SIGFPE, signal.SIGUSR1, signal.SIGSEGV,
+                signal.SIGUSR2, signal.SIGPIPE, signal.SIGALRM]:
+        signal.signal(sig, sig_noop)
+
+    for sig in [signal.SIGINT, signal.SIGKILL, signal.SIGTERM]:
+        signal.signal(sig, terminate_loop)
+
+
+# ignore the given signal
+def sig_noop():
+    # do nothing
+    pass
+
+
+# allow the program to gracefully exit
+def terminate_loop():
+    global keep_running
+    keep_running = False
+
+
 def main():
+    # gracefully handle signals
+    handle_signals()
+
     # we only want the pygame.JOYAXISMOTION events
     pygame.event.set_allowed(None)
     pygame.event.set_allowed(pygame.JOYAXISMOTION)
