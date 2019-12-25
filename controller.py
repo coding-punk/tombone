@@ -8,7 +8,8 @@ from adafruit_servokit import ServoKit
 
 LOG_FILENAME = "/var/log/tombone.log"
 logger = logging.getLogger("coding-punk.tombone")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
+
 # keep 10 1MB log files
 handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=1048576, backupCount=10)
 logger.addHandler(handler)
@@ -34,33 +35,27 @@ axis_dict = {
     right_trigger: spinner
 }
 
-# raw joystick values are
-max_joy_value = 37775
-
 # signal to terminate the loop
 keep_running = True
 
 
 # the main control loop
 def loop():
+    print("in the loop")
     while keep_running:
-        # see if we want debug or normal logging
-        if os.path.exists("/tmp/debug"):
-            logger.setLevel(logging.DEBUG)
-        else:
-            logger.setLevel(logging.INFO)
         # wait for joystick event
         for event in pygame.event.get():
+            axis = event.dict['axis']
             # this *should* always be true
             if event.type == pygame.JOYAXISMOTION:
-                axis = event.dict['axis']
-                motor = axis_dict[axis]
-                value = event.dict['value']
-                # special handling for axis 5, invert its readings
-                # so it spins the spinner in reverse
-                if axis == 5:
-                    value = value * -1
-                control_motor(motor, value)
+                if axis in [1,2,4,5]:
+                    motor = axis_dict[axis]
+                    value = event.dict['value']
+                    # special handling for axis 5, invert its readings
+                    # so it spins the spinner in reverse
+                    if axis == 5:
+                        value = value * -1
+                    control_motor(motor, value)
     pygame.display.quit()
     pygame.quit()
 
@@ -69,15 +64,14 @@ def loop():
 # if 1 > |x| > .67 it is linear, otherwise
 # y = .2x + 1.6x^3 + .5x^5
 def calculate_curve(raw_input):
-    logger.debug("received input value : {0}", raw_input)
-    x = raw_input / max_joy_value
+    x = raw_input
     equation_cutoff = 0.67
     if abs(x) <= equation_cutoff:
-        calc = (0.2 * x) + (1.6 * x ^ 3) + (0.5 * x ^ 5)
-        logger.debug("returning value {}", calc)
+        calc = (0.2 * x) + (1.6 * (x ** 3)) + (0.5 * (x ** 5))
+        print('raw input: {0} output: {1}'.format(raw_input, calc))
         return calc
     else:
-        logger.debug("returning value {}", raw_input)
+        print('raw input: {0} output: {0}'.format(raw_input))
         return raw_input
 
 
@@ -96,29 +90,37 @@ def handle_signals():
 
 # allow the program to gracefully exit
 def terminate_loop():
-    logger.error("received signal, terminating program")
     global keep_running
     keep_running = False
 
 
 def main():
+    print("starting up")
     logger.info("starting tombone")
     # gracefully handle signals
-    handle_signals()
-
+    
+    #handle_signals()
+    print("setting up pygame")
+    pygame.init()
     # we only want the pygame.JOYAXISMOTION events
-    pygame.event.set_allowed(None)
-    pygame.event.set_allowed(pygame.JOYAXISMOTION)
+    #pygame.event.set_allowed(None)
+    #pygame.event.set_allowed(pygame.JOYAXISMOTION)
 
     # need to init the display because
     # the event queue relies on it
+    print("setting up the display")
     pygame.display.init()
 
     # set up the joystick to get events
-    pygame.joystick.init()
-    pygame.joystick.Joystick(0)
-
+    print("waiting for joystick")
+    while pygame.joystick.get_count() == 0:
+        pass
+    print("setting up joystick")
+    joy = pygame.joystick.Joystick(0)
+    joy.init()
+    
     # start handling events
+    print("calling loop")
     loop()
     logging.info("ending tombone")
 
