@@ -1,7 +1,17 @@
+import logging
+import os.path
 import signal
+from logging import handlers
 
 import pygame
 from adafruit_servokit import ServoKit
+
+LOG_FILENAME = "/var/log/tombone.log"
+logger = logging.getLogger("coding-punk.tombone")
+logger.setLevel(logging.INFO)
+# keep 10 1MB log files
+handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=1048576, backupCount=10)
+logger.addHandler(handler)
 
 kit = ServoKit(channels=16)
 
@@ -34,6 +44,11 @@ keep_running = True
 # the main control loop
 def loop():
     while keep_running:
+        # see if we want debug or normal logging
+        if os.path.exists("/tmp/debug"):
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.INFO)
         # wait for joystick event
         for event in pygame.event.get():
             # this *should* always be true
@@ -54,12 +69,16 @@ def loop():
 # if 1 > |x| > .67 it is linear, otherwise
 # y = .2x + 1.6x^3 + .5x^5
 def calculate_curve(raw_input):
+    logger.debug("received input value : {0}", raw_input)
     x = raw_input / max_joy_value
     equation_cutoff = 0.67
     if abs(x) <= equation_cutoff:
-        return (0.2 * x) + (1.6 * x ^ 3) + (0.5 * x ^ 5)
+        calc = (0.2 * x) + (1.6 * x ^ 3) + (0.5 * x ^ 5)
+        logger.debug("returning value {}", calc)
+        return calc
     else:
-        return input
+        logger.debug("returning value {}", raw_input)
+        return raw_input
 
 
 # takes the raw reading of the joystick
@@ -77,11 +96,13 @@ def handle_signals():
 
 # allow the program to gracefully exit
 def terminate_loop():
+    logger.error("received signal, terminating program")
     global keep_running
     keep_running = False
 
 
 def main():
+    logger.info("starting tombone")
     # gracefully handle signals
     handle_signals()
 
@@ -99,6 +120,7 @@ def main():
 
     # start handling events
     loop()
+    logging.info("ending tombone")
 
 
 if __name__ == "__main__":
