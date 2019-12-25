@@ -70,21 +70,9 @@ def control_motor(motor, reading):
 
 
 def handle_signals():
-    # register the signals to be caught
-    for sig in [signal.SIGHUP, signal.SIGQUIT, signal.SIGILL,
-                signal.SIGTRAP, signal.SIGABRT, signal.SIGBUS,
-                signal.SIGFPE, signal.SIGUSR1, signal.SIGSEGV,
-                signal.SIGUSR2, signal.SIGPIPE, signal.SIGALRM]:
-        signal.signal(sig, sig_noop)
-
-    for sig in [signal.SIGINT, signal.SIGKILL, signal.SIGTERM]:
+    # register the signals to be caught, turns out the Pi can only handle these signals
+    for sig in [signal.SIGILL, signal.SIGABRT, signal.SIGFPE, signal.SIGSEGV, signal.SIGINT, signal.SIGTERM]:
         signal.signal(sig, terminate_loop)
-
-
-# ignore the given signal
-def sig_noop():
-    # do nothing
-    pass
 
 
 # allow the program to gracefully exit
