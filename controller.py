@@ -1,6 +1,7 @@
 import logging
 import os.path
 import signal
+import time
 from logging import handlers
 
 import pygame
@@ -45,15 +46,18 @@ def loop():
     while keep_running:
         # wait for joystick event
         for event in pygame.event.get():
-            axis = event.dict['axis']
             # this *should* always be true
             if event.type == pygame.JOYAXISMOTION:
+                axis = event.dict['axis']
                 if axis in [1,2,4,5]:
                     motor = axis_dict[axis]
                     value = event.dict['value']
                     # special handling for axis 5, invert its readings
                     # so it spins the spinner in reverse
-                    if axis == 5:
+                    if axis in [2,5]:
+                        if value < 0:
+                            value = 0
+                    if axis in [1,5]:
                         value = value * -1
                     control_motor(motor, value)
     pygame.display.quit()
@@ -65,6 +69,12 @@ def loop():
 # y = .2x + 1.6x^3 + .5x^5
 def calculate_curve(raw_input):
     x = raw_input
+    if x > 1:
+        x = 1
+    else:
+        if x < -1:
+            x = -1
+    print("raw_input is {0} and x is {1}".format(raw_input, x))
     equation_cutoff = 0.67
     if abs(x) <= equation_cutoff:
         calc = (0.2 * x) + (1.6 * (x ** 3)) + (0.5 * (x ** 5))
@@ -72,7 +82,7 @@ def calculate_curve(raw_input):
         return calc
     else:
         print('raw input: {0} output: {0}'.format(raw_input))
-        return raw_input
+        return x
 
 
 # takes the raw reading of the joystick
@@ -103,17 +113,18 @@ def main():
     print("setting up pygame")
     pygame.init()
     # we only want the pygame.JOYAXISMOTION events
-    #pygame.event.set_allowed(None)
-    #pygame.event.set_allowed(pygame.JOYAXISMOTION)
+    pygame.event.set_allowed(None)
+    pygame.event.set_allowed(pygame.JOYAXISMOTION)
 
-    # need to init the display because
-    # the event queue relies on it
+    # need to init the display because the event queue relies on it
     print("setting up the display")
     pygame.display.init()
 
     # set up the joystick to get events
     print("waiting for joystick")
     while pygame.joystick.get_count() == 0:
+        print("waiting for joystick count to go past {0}".format(pygame.joystick.get_count()))
+        time.sleep(5)
         pass
     print("setting up joystick")
     joy = pygame.joystick.Joystick(0)
