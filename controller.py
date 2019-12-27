@@ -1,5 +1,4 @@
 import logging
-import os.path
 import signal
 import time
 from logging import handlers
@@ -10,9 +9,10 @@ from adafruit_servokit import ServoKit
 LOG_FILENAME = "/var/log/tombone.log"
 logger = logging.getLogger("coding-punk.tombone")
 logger.setLevel(logging.DEBUG)
-
+formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 # keep 10 1MB log files
 handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=1048576, backupCount=10)
+handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 kit = ServoKit(channels=16)
@@ -42,7 +42,6 @@ keep_running = True
 
 # the main control loop
 def loop():
-    print("in the loop")
     while keep_running:
         # wait for joystick event
         for event in pygame.event.get():
@@ -74,14 +73,13 @@ def calculate_curve(raw_input):
     else:
         if x < -1:
             x = -1
-    print("raw_input is {0} and x is {1}".format(raw_input, x))
     equation_cutoff = 0.67
     if abs(x) <= equation_cutoff:
         calc = (0.2 * x) + (1.6 * (x ** 3)) + (0.5 * (x ** 5))
-        print('raw input: {0} output: {1}'.format(raw_input, calc))
+        logger.debug('raw input: {0} output: {1}'.format(raw_input, calc))
         return calc
     else:
-        print('raw input: {0} output: {0}'.format(raw_input))
+        logger.debug('raw input: {0} output: {0}'.format(raw_input))
         return x
 
 
@@ -104,34 +102,32 @@ def terminate_loop():
     keep_running = False
 
 
-def main():
-    print("starting up")
-    logger.info("starting tombone")
-    # gracefully handle signals
-    
-    #handle_signals()
-    print("setting up pygame")
+def init_pygame():
+    pygame.display.quit()
+    pygame.quit()
     pygame.init()
     # we only want the pygame.JOYAXISMOTION events
     pygame.event.set_allowed(None)
     pygame.event.set_allowed(pygame.JOYAXISMOTION)
-
-    # need to init the display because the event queue relies on it
-    print("setting up the display")
     pygame.display.init()
 
+
+def main():
+    logger.info("starting tombone")
+    # gracefully handle signals
+
+    handle_signals()
+    init_pygame()
     # set up the joystick to get events
     print("waiting for joystick")
     while pygame.joystick.get_count() == 0:
         print("waiting for joystick count to go past {0}".format(pygame.joystick.get_count()))
         time.sleep(5)
-        pass
-    print("setting up joystick")
+        init_pygame()
     joy = pygame.joystick.Joystick(0)
     joy.init()
-    
+
     # start handling events
-    print("calling loop")
     loop()
     logging.info("ending tombone")
 
