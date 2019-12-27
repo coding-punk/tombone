@@ -18,8 +18,8 @@ logger.addHandler(handler)
 kit = ServoKit(channels=16)
 
 # the motors on the servo board
-left_motor = kit.continuous_servo[1]
-right_motor = kit.continuous_servo[2]
+right_motor = kit.continuous_servo[1]
+left_motor = kit.continuous_servo[2]
 spinner = kit.continuous_servo[3]
 
 # joystick axes
@@ -97,7 +97,7 @@ def handle_signals():
 
 
 # allow the program to gracefully exit
-def terminate_loop():
+def terminate_loop(signal, thing):
     global keep_running
     keep_running = False
 
