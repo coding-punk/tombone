@@ -51,12 +51,12 @@ def loop():
                 if axis in [1,2,4,5]:
                     motor = axis_dict[axis]
                     value = event.dict['value']
-                    # special handling for axis 5, invert its readings
-                    # so it spins the spinner in reverse
+                    # axes 2 and 5 can return values > 1 and < -1
                     if axis in [2,5]:
                         if value < 0:
                             value = 0
-                    if axis in [1,5]:
+                    # adjust for motor orientation
+                    if axis in [2,4]:
                         value = value * -1
                     control_motor(motor, value)
     pygame.display.quit()
